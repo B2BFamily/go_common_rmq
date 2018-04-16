@@ -89,11 +89,9 @@ func (sender *Connector) Pop(callback func([]byte)) {
 
 	go func() {
 		for d := range msgs {
-			// log.Printf("Received a message: %s", d.Body)
 			callback(d.Body)
 		}
 	}()
 
-	// log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 	<-forever
 }
