@@ -47,6 +47,10 @@ func (sender *Connector) QueueClose() {
 	sender.IsInit = false
 }
 
+func (sender *Connector) Send(mess interface{}) {
+	sender.Push(mess)
+}
+
 func (sender *Connector) Push(mess interface{}) {
 	if !sender.IsInit {
 		sender.QueueInit()
