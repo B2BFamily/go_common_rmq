@@ -2,7 +2,6 @@ package rmq
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/streadway/amqp"
 	"log"
 )
@@ -16,19 +15,18 @@ type Connector struct {
 	IsInit bool             //флаг, отвечающий за состояние коннектора
 }
 
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Fatalf("%s: %s", msg, err)
-		panic(fmt.Sprintf("%s: %s", msg, err))
-	}
-}
-
-func (sender *Connector) QueueInit() {
+func (sender *Connector) QueueInit() error {
 	var err error
 	sender.Conn, err = amqp.Dial(sender.Url)
-	failOnError(err, "Failed to connect to RabbitMQ")
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %s", err)
+		return err
+	}
 	sender.Chan, err = sender.Conn.Channel()
-	failOnError(err, "Failed to open a channel")
+	if err != nil {
+		log.Fatalf("Failed to open a channel: %s", err)
+		return err
+	}
 	sender.Que, err = sender.Chan.QueueDeclare(
 		sender.Name, // name
 		true,        // durable
@@ -37,8 +35,12 @@ func (sender *Connector) QueueInit() {
 		false,       // no-wait
 		nil,         // arguments
 	)
-	failOnError(err, "Failed to declare a queue")
+	if err != nil {
+		log.Fatalf("Failed to declare a queue: %s", err)
+		return err
+	}
 	sender.IsInit = true
+	return nil
 }
 
 func (sender *Connector) QueueClose() {
@@ -48,17 +50,20 @@ func (sender *Connector) QueueClose() {
 }
 
 func (sender *Connector) Send(mess interface{}) {
-	sender.Push(mess)
+	_ = sender.Push(mess)
 }
 
-func (sender *Connector) Push(mess interface{}) {
+func (sender *Connector) Push(mess interface{}) error {
 	if !sender.IsInit {
 		sender.QueueInit()
 		defer sender.QueueClose()
 	}
 
 	out, err := json.Marshal(mess)
-	failOnError(err, "Failed to convert message")
+	if err != nil {
+		log.Fatalf("Failed to convert message: %s", err)
+		return err
+	}
 
 	err = sender.Chan.Publish(
 		"",              // exchange
@@ -69,10 +74,14 @@ func (sender *Connector) Push(mess interface{}) {
 			ContentType: "text/plain",
 			Body:        []byte(string(out)),
 		})
-	failOnError(err, "Failed to publish a message")
+	if err != nil {
+		log.Fatalf("Failed to publish a message: %s", err)
+		return err
+	}
+	return nil
 }
 
-func (sender *Connector) Pop(callback func([]byte)) {
+func (sender *Connector) Pop(callback func([]byte)) error {
 	if !sender.IsInit {
 		sender.QueueInit()
 		defer sender.QueueClose()
@@ -87,9 +96,12 @@ func (sender *Connector) Pop(callback func([]byte)) {
 		false,           // no-wait
 		nil,             // args
 	)
-	failOnError(err, "Failed to register a consumer")
+	if err != nil {
+		log.Fatalf("Failed to register a consumer: %s", err)
+		return err
+	}
 
-	forever := make(chan bool)
+	// forever := make(chan bool)
 
 	go func() {
 		for d := range msgs {
@@ -97,5 +109,6 @@ func (sender *Connector) Pop(callback func([]byte)) {
 		}
 	}()
 
-	<-forever
+	// <-forever
+	return nil
 }
