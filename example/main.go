@@ -8,10 +8,7 @@ import (
 )
 
 func sending() {
-	sender := rmq.Connector{
-		Url:  "",
-		Name: "",
-	}
+	sender := rmq.Connector{}
 	sender.QueueInit()
 	defer sender.QueueClose()
 	for i := 0; i < 20; i++ {
@@ -23,10 +20,7 @@ func sending() {
 }
 
 func listening() {
-	listner := rmq.Connector{
-		Url:  "",
-		Name: "",
-	}
+	listner := rmq.Connector{}
 	listner.Pop(func(body []byte) {
 		log.Printf("Received a message: %s", body)
 	})
@@ -34,8 +28,10 @@ func listening() {
 }
 
 func main() {
-	forever := make(chan bool)
-	go sending()
+	wait := make(chan bool)
 	go listening()
-	<-forever
+	amt := time.Duration(rand.Intn(1000))
+	time.Sleep(time.Millisecond * amt)
+	sending()
+	<-wait
 }

@@ -101,7 +101,7 @@ func (sender *Connector) Pop(callback func([]byte)) error {
 		return err
 	}
 
-	// forever := make(chan bool)
+	forever := make(chan bool)
 
 	go func() {
 		for d := range msgs {
@@ -109,6 +109,6 @@ func (sender *Connector) Pop(callback func([]byte)) error {
 		}
 	}()
 
-	// <-forever
+	<-forever
 	return nil
 }
