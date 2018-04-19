@@ -52,7 +52,7 @@ func (sender *Connector) QueueInit() error {
 		return err
 	}
 	if sender.Config.PrefetchCount > 0 {
-		err = sender.Conn.Qos(sender.Config.PrefetchCount, 0, false)
+		err = sender.Chan.Qos(sender.Config.PrefetchCount, 0, false)
 		if err != nil {
 			log.Fatalf("Failed to set QoS: %s", err)
 			return err
