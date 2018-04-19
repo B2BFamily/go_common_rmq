@@ -51,6 +51,13 @@ func (sender *Connector) QueueInit() error {
 		log.Fatalf("Failed to open a channel: %s", err)
 		return err
 	}
+	if sender.Config.PrefetchCount > 0 {
+		err = sender.Conn.Qos(sender.Config.PrefetchCount, 0, false)
+		if err != nil {
+			log.Fatalf("Failed to set QoS: %s", err)
+			return err
+		}
+	}
 	sender.Que, err = sender.Chan.QueueDeclare(
 		sender.Config.Name,    // name
 		sender.Config.Durable, // durable
