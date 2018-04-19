@@ -1,23 +1,47 @@
+//Библиотека для работы с очередями RabbitMQ
 package rmq
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/B2BFamily/config"
 	"github.com/streadway/amqp"
 	"log"
 )
 
-type Connector struct {
-	Url    string           //ссылка для подключения к очередям
-	Name   string           //название очереди
-	Conn   *amqp.Connection //Соединение с очередью
-	Chan   *amqp.Channel    //канал для работы с очередью
-	Que    amqp.Queue       //очередь
-	IsInit bool             //флаг, отвечающий за состояние коннектора
+//На основе конфигурации создаем подключение к очереди
+//
+//Пример корфигурации для автоматического создания подключения:
+//	{
+//	  "example": {
+//	    "queue": {
+//	      "login": "username",
+//	      "password": "password",
+//	      "server": "server"
+//	    },
+//	    "url": "amqp://username:password@server/",
+//	    "name": "webhooks_for_result_queue_name_test",
+//	    "prefetch_count": 2,
+//	    "durable": true
+//	    "auto_ask": true
+//	  }
+//	}
+//
+//Пример вызова
+//	conn := Create("example")
+func Create(configPath string) *Connector {
+	conn := new(Connector)
+	config.GetConfigPath(configPath, &conn.Config)
+	if len(conn.Config.Url) == 0 {
+		conn.Config.Url = fmt.Sprintf("amqp://%v:%v@%v/", conn.Config.Queue.Login, conn.Config.Queue.Password, conn.Config.Queue.Server)
+	}
+	return conn
 }
 
+//Инициализация очереди
 func (sender *Connector) QueueInit() error {
 	var err error
-	sender.Conn, err = amqp.Dial(sender.Url)
+	sender.Conn, err = amqp.Dial(sender.Config.Url)
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %s", err)
 		return err
@@ -28,12 +52,12 @@ func (sender *Connector) QueueInit() error {
 		return err
 	}
 	sender.Que, err = sender.Chan.QueueDeclare(
-		sender.Name, // name
-		true,        // durable
-		false,       // delete when unused
-		false,       // exclusive
-		false,       // no-wait
-		nil,         // arguments
+		sender.Config.Name,    // name
+		sender.Config.Durable, // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
 	)
 	if err != nil {
 		log.Fatalf("Failed to declare a queue: %s", err)
@@ -43,16 +67,19 @@ func (sender *Connector) QueueInit() error {
 	return nil
 }
 
+//Отключение от очереди
 func (sender *Connector) QueueClose() {
 	sender.Chan.Close()
 	sender.Conn.Close()
 	sender.IsInit = false
 }
 
+//Отправка сообщения в очередь (устаревший)
 func (sender *Connector) Send(mess interface{}) {
 	_ = sender.Push(mess)
 }
 
+//Отправка сообщения в очередь
 func (sender *Connector) Push(mess interface{}) error {
 	if !sender.IsInit {
 		sender.QueueInit()
@@ -81,7 +108,8 @@ func (sender *Connector) Push(mess interface{}) error {
 	return nil
 }
 
-func (sender *Connector) Pop(callback func([]byte)) error {
+//Подключение к очереди для её прослушивания
+func (sender *Connector) Pop(callback func(*Item)) error {
 	if !sender.IsInit {
 		sender.QueueInit()
 		defer sender.QueueClose()
@@ -90,11 +118,11 @@ func (sender *Connector) Pop(callback func([]byte)) error {
 	msgs, err := sender.Chan.Consume(
 		sender.Que.Name, // queue
 		"",              // consumer
-		true,            // auto-ack
-		false,           // exclusive
-		false,           // no-local
-		false,           // no-wait
-		nil,             // args
+		sender.Config.AutoAck, // auto-ack
+		false, // exclusive
+		false, // no-local
+		false, // no-wait
+		nil,   // args
 	)
 	if err != nil {
 		log.Fatalf("Failed to register a consumer: %s", err)
@@ -105,7 +133,7 @@ func (sender *Connector) Pop(callback func([]byte)) error {
 
 	go func() {
 		for d := range msgs {
-			callback(d.Body)
+			callback(createItem(d))
 		}
 	}()
 
