@@ -6,7 +6,7 @@ import (
 
 //объект подключения к очереди
 type Connector struct {
-	Config *ConfigModel     //настройка очереди
+	Config ConfigModel      //настройка очереди
 	Conn   *amqp.Connection //Соединение с очередью
 	Chan   *amqp.Channel    //канал для работы с очередью
 	Que    amqp.Queue       //очередь
