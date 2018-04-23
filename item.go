@@ -5,8 +5,8 @@ import (
 )
 
 //Ответ о завершении обработки элемента в очеред, необходим если в очереди
-func (item Item) Ack(multiple bool) error {
-	return item.Ack(multiple)
+func (item Item) ExecAck(multiple bool) error {
+	return item.delivery.Ack(multiple)
 }
 
 func createItem(d amqp.Delivery) *Item {
