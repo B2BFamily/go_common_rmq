@@ -5,7 +5,7 @@ import (
 )
 
 //Ответ о завершении обработки элемента в очеред, необходим если в очереди
-func (item Item) ExecAck(multiple bool) error {
+func (item Item) Ack(multiple bool) error {
 	return item.delivery.Ack(multiple)
 }
 
