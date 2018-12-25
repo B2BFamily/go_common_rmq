@@ -1,4 +1,4 @@
-package rmq
+package go_common_rmq
 
 import (
 	"github.com/streadway/amqp"

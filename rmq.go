@@ -1,10 +1,10 @@
 //Библиотека для работы с очередями RabbitMQ
-package rmq
+package go_common_rmq
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/B2BFamily/config"
+	config "github.com/B2BFamily/go_common_config"
 	"github.com/streadway/amqp"
 	"log"
 )
