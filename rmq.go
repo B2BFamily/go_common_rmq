@@ -38,6 +38,15 @@ func Create(configPath string) *Connector {
 	return conn
 }
 
+func CreateWithConfigModel(config *ConfigModel) *Connector {
+	conn := new(Connector)
+	conn.Config = *config
+	if len(conn.Config.Url) == 0 {
+		conn.Config.Url = fmt.Sprintf("amqp://%v:%v@%v/", conn.Config.Queue.Login, conn.Config.Queue.Password, conn.Config.Queue.Server)
+	}
+	return conn
+}
+
 //Инициализация очереди
 func (sender *Connector) QueueInit() error {
 	var err error
