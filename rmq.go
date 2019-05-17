@@ -124,6 +124,29 @@ func (sender *Connector) Push(mess interface{}) error {
 	return nil
 }
 
+//Отправка сообщения в очередь
+func (sender *Connector) PushString(mess string) error {
+	if !sender.IsInit {
+		sender.QueueInit()
+		defer sender.QueueClose()
+	}
+
+	err := sender.Chan.Publish(
+		"",              // exchange
+		sender.Que.Name, // routing key
+		false,           // mandatory
+		false,           // immediate
+		amqp.Publishing{
+			ContentType: "text/plain",
+			Body:        []byte(mess),
+		})
+	if err != nil {
+		log.Fatalf("Failed to publish a message: %s", err)
+		return err
+	}
+	return nil
+}
+
 //Подключение к очереди для её прослушивания
 func (sender *Connector) Pop(callback func(*Item)) error {
 	if !sender.IsInit {
